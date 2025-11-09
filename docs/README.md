@@ -26,6 +26,8 @@ A platform to streamline the organization of esports tournaments by empowering o
 
 ### Tournament Management
 - Versioned REST API (/api/v1/tournaments) for CRUD, listing, archiving, and filtering
+- [GET] `/api/v1/tournaments/<id>/bracket/` returns tournament seed/bracket structure
+- [GET] `/api/v1/tournaments/<id>/leaderboard/` returns leaderboard and stats
 
 ### Participant Registration
 - APIs for individual/player and team tournament registration
@@ -33,11 +35,12 @@ A platform to streamline the organization of esports tournaments by empowering o
 
 ### Match Scheduling, Bracket Generation
 - Seed participants and generate brackets using optimized SQL (window functions/CTEs via Django DB API)
-- API for fetching bracket data
+- API for fetching bracket data (see above)
 
 ### Leaderboard & Stats
 - Leaderboards and statistics for tournaments, filterable by player/team
 - Paginated and leveraging optimized SQL queries for performance
+- API endpoint: `/api/v1/tournaments/<id>/leaderboard/`
 
 ### ELO Rating Calculation
 - Background recalculation with Celery (triggered at match completion)
@@ -45,12 +48,13 @@ A platform to streamline the organization of esports tournaments by empowering o
 
 ### Authentication
 - DRF TokenAuthentication (set in `settings.py`)
-- POST/PUT/DELETE require authentication, GET is public
+- All unsafe methods require authentication (POST/PUT/DELETE = 401 if unauthenticated)
+- GET is public
 
 ## Architecture
-- **Layered:** API Layer (DRF ViewSets), Service Layer (business logic in services.py), Data Layer (Django ORM models)
+- **Layered:** API Layer (DRF ViewSets routing to service layer), Service Layer (business logic in services.py), Data Layer (Django ORM models)
 - **Patterns:** Service Object Pattern, Repository hints via custom managers, Asynchronous Task Queue (Celery)
-- **Tests:** pytest, pytest-django for core features, service logic, auth, and async tasks
+- **Tests:** pytest, pytest-django for core features, service logic, API endpoints (including bracket/leaderboard), auth, and async tasks
 
 ## Running and Development
 

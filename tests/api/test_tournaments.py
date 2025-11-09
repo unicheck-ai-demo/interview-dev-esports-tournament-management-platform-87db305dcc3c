@@ -36,3 +36,27 @@ def test_api_list_tournaments(api_client):
     response = api_client.get(url)
     assert response.status_code == status.HTTP_200_OK
     assert len(response.data['results']) >= 1
+
+
+def test_tournament_bracket_and_leaderboard(authenticated_api_client):
+    # Create tournament and register some players
+    tournament_url = reverse('api:tournament-list')
+    payload = {
+        'name': 'Bracket Tourney',
+        'description': 'Bracket test',
+        'start_date': timezone.now(),
+        'end_date': timezone.now(),
+        'status': 'active',
+        'max_participants': 8,
+    }
+    response = authenticated_api_client.post(tournament_url, payload, format='json')
+    assert response.status_code == status.HTTP_201_CREATED
+    t_id = response.data['id']
+    bracket_url = reverse('api:tournament-bracket', args=[t_id])
+    leaderboard_url = reverse('api:tournament-leaderboard', args=[t_id])
+    bracket_resp = authenticated_api_client.get(bracket_url)
+    assert bracket_resp.status_code == 200
+    assert 'bracket' in bracket_resp.data
+    leaderboard_resp = authenticated_api_client.get(leaderboard_url)
+    assert leaderboard_resp.status_code == 200
+    assert 'leaderboard' in leaderboard_resp.data
