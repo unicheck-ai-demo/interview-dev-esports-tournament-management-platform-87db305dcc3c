@@ -42,16 +42,68 @@ Good luck and enjoy!
 
 ## About Project
 
+A platform to streamline the organization of esports tournaments by empowering organizers to create and manage tournaments, register participants and teams, generate and schedule match brackets, track results in real time, and automatically update player and team rankings.
+
+[see more details](docs/)
+
 ### Tech Stack
 
 - Python: 3.11
 - Django: 4
-- Celery: 5
 - API: Django REST Framework
 - Database: PostgreSQL 15
 - Caching: Redis 7
 - Testing: Pytest, Pytest-Django
+- Architecture: Service Pattern, Resource-Based API
 - Dependency Management: `requirements.txt`
+
+
+### Project Structure Overview
+```bash
+> tree -a --gitignore /app 
+.
+├── .env.example
+├── app
+│   ├── api
+│   │   ├── serializers.py
+│   │   ├── urls.py
+│   │   └── views.py
+│   ├── apps.py
+│   ├── constants.py
+│   ├── migrations
+│   │   └── 0001_initial.py
+│   ├── models.py
+│   ├── services.py
+│   └── tasks.py
+├── config
+│   ├── asgi.py
+│   ├── celery.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── docker-compose.yml
+├── Dockerfile
+├── docs
+│   └── README.md
+├── Makefile
+├── manage.py
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+└── tests
+    ├── api
+    │   ├── test_auth.py
+    │   ├── test_heapth.py
+    │   └── test_tournaments.py
+    ├── conftest.py
+    ├── models
+    │   └── test_models.py
+    └── services
+        └── test_services.py
+
+10 directories, 29 files
+
+```
 
 ---
 Contact: [info@unicheck.ai](mailto:info@unicheck.ai)
