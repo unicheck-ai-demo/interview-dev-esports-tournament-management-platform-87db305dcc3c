@@ -55,14 +55,13 @@ class TournamentService:
                     FROM seed_players
                 )
                 SELECT * FROM numbered_players;
-            """,
+                """,
                 [tournament.id],
             )
             return cursor.fetchall()
 
     @staticmethod
     def get_leaderboard(tournament: Tournament):
-        # Leaderboard for both players and teams
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -76,7 +75,7 @@ class TournamentService:
                 JOIN app_registration r ON r.team_id = t.id
                 WHERE r.tournament_id = %s
                 ORDER BY elo_rating DESC;
-            """,
+                """,
                 [tournament.id, tournament.id],
             )
             return cursor.fetchall()
@@ -132,7 +131,7 @@ class RegistrationService:
                 [tournament.id],
             )
             current_count = cursor.fetchone()[0]
-            if current_count >= tournament.max_participants:
+            if current_count > tournament.max_participants:
                 raise ValueError('Tournament is full')
         return Registration.objects.create(tournament=tournament, player=player)
 
