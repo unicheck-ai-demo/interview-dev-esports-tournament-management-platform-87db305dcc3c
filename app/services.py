@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import connection, transaction
 
 from app.models import Match, Player, Registration, Team, Tournament
+from app.tasks import recalculate_elo_ratings
 
 User = get_user_model()
 
@@ -37,6 +38,48 @@ class TournamentService:
         if archived is not None:
             qs = qs.filter(archived=archived)
         return qs
+
+    @staticmethod
+    def generate_bracket(tournament: Tournament):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH seed_players AS (
+                    SELECT p.id AS player_id
+                    FROM app_registration r
+                    JOIN app_player p ON r.player_id = p.id
+                    WHERE r.tournament_id = %s AND r.player_id IS NOT NULL
+                    ORDER BY p.elo_rating DESC
+                ), numbered_players AS (
+                    SELECT player_id, row_number() OVER () AS seed
+                    FROM seed_players
+                )
+                SELECT * FROM numbered_players;
+            """,
+                [tournament.id],
+            )
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_leaderboard(tournament: Tournament):
+        # Leaderboard for both players and teams
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 'player' AS type, p.id, p.nickname, p.elo_rating
+                FROM app_player p
+                JOIN app_registration r ON r.player_id = p.id
+                WHERE r.tournament_id = %s
+                UNION ALL
+                SELECT 'team' AS type, t.id, t.name, t.elo_rating
+                FROM app_team t
+                JOIN app_registration r ON r.team_id = t.id
+                WHERE r.tournament_id = %s
+                ORDER BY elo_rating DESC;
+            """,
+                [tournament.id, tournament.id],
+            )
+            return cursor.fetchall()
 
 
 class PlayerService:
@@ -83,15 +126,27 @@ class RegistrationService:
     @staticmethod
     @transaction.atomic
     def register_player(tournament: Tournament, player: Player) -> Registration:
-        if tournament.registrations.filter(player__isnull=False).count() >= tournament.max_participants:
-            raise ValueError('Tournament is full')
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT count(*) FROM app_registration WHERE tournament_id=%s AND player_id IS NOT NULL FOR UPDATE;',
+                [tournament.id],
+            )
+            current_count = cursor.fetchone()[0]
+            if current_count >= tournament.max_participants:
+                raise ValueError('Tournament is full')
         return Registration.objects.create(tournament=tournament, player=player)
 
     @staticmethod
     @transaction.atomic
     def register_team(tournament: Tournament, team: Team) -> Registration:
-        if tournament.registrations.filter(team__isnull=False).count() >= tournament.max_participants:
-            raise ValueError('Tournament is full')
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT count(*) FROM app_registration WHERE tournament_id=%s AND team_id IS NOT NULL FOR UPDATE;',
+                [tournament.id],
+            )
+            current_count = cursor.fetchone()[0]
+            if current_count >= tournament.max_participants:
+                raise ValueError('Tournament is full')
         return Registration.objects.create(tournament=tournament, team=team)
 
     @staticmethod
@@ -102,13 +157,19 @@ class RegistrationService:
 class MatchService:
     @staticmethod
     def create_match(**kwargs) -> Match:
-        return Match.objects.create(**kwargs)
+        match = Match.objects.create(**kwargs)
+        if match.completed:
+            recalculate_elo_ratings.delay(match.id)
+        return match
 
     @staticmethod
     def update_match(match: Match, **kwargs) -> Match:
+        was_completed = match.completed
         for attr, value in kwargs.items():
             setattr(match, attr, value)
         match.save()
+        if not was_completed and match.completed:
+            recalculate_elo_ratings.delay(match.id)
         return match
 
     @staticmethod
