@@ -1,12 +1,21 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from app.constants import (
+    PLAYER_NICKNAME_MAX_LENGTH,
+    TEAM_NAME_MAX_LENGTH,
+    TOURNAMENT_NAME_MAX_LENGTH,
+    TOURNAMENT_STATUS_CHOICES,
+)
 from app.models import Match, Player, Registration, Team, Tournament
 
 User = get_user_model()
 
 
 class TournamentSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(choices=TOURNAMENT_STATUS_CHOICES, required=False)
+    name = serializers.CharField(max_length=TOURNAMENT_NAME_MAX_LENGTH)
+
     class Meta:
         model = Tournament
         fields = [
@@ -25,6 +34,7 @@ class TournamentSerializer(serializers.ModelSerializer):
 
 class PlayerSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    nickname = serializers.CharField(max_length=PLAYER_NICKNAME_MAX_LENGTH)
 
     class Meta:
         model = Player
@@ -36,6 +46,7 @@ class TeamSerializer(serializers.ModelSerializer):
     member_ids = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Player.objects.all(), write_only=True, required=False
     )
+    name = serializers.CharField(max_length=TEAM_NAME_MAX_LENGTH)
 
     class Meta:
         model = Team

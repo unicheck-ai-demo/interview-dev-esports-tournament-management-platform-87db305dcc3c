@@ -12,7 +12,7 @@ router.register(r'v1/matches', MatchViewSet, basename='match')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('health/', HealthCheckView.as_view(), name='health-check'),
+    path('v1/health/', HealthCheckView.as_view(), name='health-check'),
 ]
 
 app_name = 'api'

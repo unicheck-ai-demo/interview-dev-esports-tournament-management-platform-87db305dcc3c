@@ -1,21 +1,24 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
+from app.constants import (
+    DEFAULT_ELO_RATING,
+    PLAYER_NICKNAME_MAX_LENGTH,
+    TEAM_NAME_MAX_LENGTH,
+    TOURNAMENT_NAME_MAX_LENGTH,
+    TOURNAMENT_STATUS_CHOICES,
+    TOURNAMENT_STATUS_UPCOMING,
+)
+
 User = get_user_model()
 
 
 class Tournament(models.Model):
-    STATUS_CHOICES = [
-        ('upcoming', 'Upcoming'),
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-        ('archived', 'Archived'),
-    ]
-    name = models.CharField(max_length=128)
+    name = models.CharField(max_length=TOURNAMENT_NAME_MAX_LENGTH)
     description = models.TextField(blank=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='upcoming')
+    status = models.CharField(max_length=16, choices=TOURNAMENT_STATUS_CHOICES, default=TOURNAMENT_STATUS_UPCOMING)
     max_participants = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -34,8 +37,8 @@ class Tournament(models.Model):
 
 class Player(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='player_profile')
-    nickname = models.CharField(max_length=64, unique=True)
-    elo_rating = models.IntegerField(default=1200)
+    nickname = models.CharField(max_length=PLAYER_NICKNAME_MAX_LENGTH, unique=True)
+    elo_rating = models.IntegerField(default=DEFAULT_ELO_RATING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -50,9 +53,9 @@ class Player(models.Model):
 
 
 class Team(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=TEAM_NAME_MAX_LENGTH, unique=True)
     members = models.ManyToManyField(Player, related_name='teams')
-    elo_rating = models.IntegerField(default=1200)
+    elo_rating = models.IntegerField(default=DEFAULT_ELO_RATING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

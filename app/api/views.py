@@ -2,6 +2,7 @@ from django.db import DatabaseError, connection
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -16,14 +17,29 @@ class TournamentViewSet(viewsets.ModelViewSet):
     serializer_class = TournamentSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: TournamentSerializer) -> None:
         serializer.save()
 
     @action(detail=True, methods=['post'])
-    def archive(self, request, pk=None):
+    def archive(self, request: Request, pk: str = None) -> Response:
         tournament = self.get_object()
         TournamentService.archive_tournament(tournament)
         return Response({'detail': 'Tournament archived.'})
+
+    @action(detail=True, methods=['get'], url_path='bracket')
+    def bracket(self, request: Request, pk: str = None) -> Response:
+        tournament = self.get_object()
+        bracket = TournamentService.generate_bracket(tournament)
+        # simple format for demonstration
+        return Response({'bracket': bracket})
+
+    @action(detail=True, methods=['get'], url_path='leaderboard')
+    def leaderboard(self, request: Request, pk: str = None) -> Response:
+        tournament = self.get_object()
+        leaderboard = TournamentService.get_leaderboard(tournament)
+        # simple format for demonstration
+        result = [{'type': row[0], 'id': row[1], 'name': row[2], 'elo_rating': row[3]} for row in leaderboard]
+        return Response({'leaderboard': result})
 
 
 class PlayerViewSet(viewsets.ModelViewSet):
@@ -51,7 +67,7 @@ class MatchViewSet(viewsets.ModelViewSet):
 
 
 class HealthCheckView(APIView):
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         try:
             with connection.cursor() as cursor:
                 cursor.execute('SELECT PostGIS_Full_Version();')
